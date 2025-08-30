@@ -4,8 +4,7 @@ GVHD: Lê Duy Hùng
 
 ---
 
-SVTH: Ngô Lê Thành Hải
-      Nguyễn Quốc Thái
+SVTH: Ngô Lê Thành Hải; Nguyễn Quốc Thái
 
 ---
 
