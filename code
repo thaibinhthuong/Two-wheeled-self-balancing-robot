@@ -1,0 +1,103 @@
+#include <Wire.h>
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+
+// ================== MPU6050 ==================
+MPU6050 mpu;
+bool dmpReady = false;
+uint8_t mpuIntStatus;   
+uint8_t devStatus;      
+uint16_t packetSize;    
+uint16_t fifoCount;     
+uint8_t fifoBuffer[64]; 
+
+Quaternion q;           
+VectorFloat gravity;    
+float ypr[3];           
+
+// ================== Motor ==================
+#define ENA 2    // D4
+#define ENB 15   // D8
+#define IN1 12   // D6
+#define IN2 14   // D5
+#define IN3 13   // D7
+#define IN4 16   // D0
+
+// PID
+float Kp = 20, Ki = 0.5, Kd = 0.8;
+float setPoint = 0.0;
+float input, output;
+float lastError = 0, integral = 0;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+
+  // Motor pin setup
+  pinMode(ENA, OUTPUT);
+  pinMode(ENB, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  // Setup MPU6050
+  mpu.initialize();
+  devStatus = mpu.dmpInitialize();
+
+  if (devStatus == 0) {
+    mpu.setDMPEnabled(true);
+    mpuIntStatus = mpu.getIntStatus();
+    dmpReady = true;
+    packetSize = mpu.dmpGetFIFOPacketSize();
+    Serial.println("MPU6050 ready!");
+  } else {
+    Serial.println("MPU6050 init failed!");
+  }
+}
+
+void loop() {
+  if (!dmpReady) return;
+
+  // Get MPU6050 data
+  fifoCount = mpu.getFIFOCount();
+  if (fifoCount >= packetSize) {
+    mpu.getFIFOBytes(fifoBuffer, packetSize);
+    mpu.dmpGetQuaternion(&q, fifoBuffer);
+    mpu.dmpGetGravity(&gravity, &q);
+    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+    input = ypr[1] * 180/M_PI;  // Góc pitch
+
+    // PID
+    float error = setPoint - input;
+    integral += error;
+    float derivative = error - lastError;
+    output = Kp*error + Ki*integral + Kd*derivative;
+    lastError = error;
+
+    // Điều khiển motor
+    setMotor(output);
+  }
+}
+
+void setMotor(float speed) {
+  int pwmVal = constrain(abs(speed), 0, 255);
+
+  if (speed > 0) {
+    // Tiến
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
+  } else {
+    // Lùi
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, HIGH);
+  }
+
+  analogWrite(ENA, pwmVal);
+  analogWrite(ENB, pwmVal);
+}
