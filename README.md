@@ -1,8 +1,13 @@
 # Robot Tự Cân Bằng 2 Bánh
 
 GVHD: Lê Duy Hùng
+
+---
+
 SVTH: Ngô Lê Thành Hải
       Nguyễn Quốc Thái
+
+---
 
 ## Giới thiệu
 Dự án này hiện thực một robot 2 bánh tự cân bằng sử dụng cảm biến MPU6050, thuật toán PID và lập trình đa luồng với FreeRTOS.  
